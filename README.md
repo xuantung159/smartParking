@@ -158,7 +158,15 @@ Handler hiện có hỗ trợ lỗi nghiệp vụ dạng `ProblemDetail`, kèm t
 }
 ```
 
-Request/response đề xuất, các quy tắc chi tiết và kịch bản review nằm trong [tài liệu chuẩn bị review](CHUAN-BI-REVIEW.md). Swagger hiện phản ánh các mapping trong mã nguồn, chưa phải hợp đồng hoàn chỉnh của 15 API.
+Request/response đề xuất, các quy tắc chi tiết và kịch bản review nằm trong [tài liệu chuẩn bị review](CHUAN-BI-REVIEW.md).
+
+### Swagger trên web
+
+Trang tài liệu được chuẩn bị tại địa chỉ **[Smart Parking API](https://xuantung159.github.io/smartParking/)**. Link chỉ truy cập được sau khi GitHub Pages được bật và triển khai thành công.
+
+Trang sử dụng [đặc tả OpenAPI](docs/openapi.json) cho đủ 15 endpoint mục tiêu, không cần chạy backend hoặc MySQL. Chế độ gọi thử API đã tắt; nội dung là hợp đồng dự kiến, không phải bằng chứng chức năng đã được triển khai.
+
+Mã trang nằm trong `docs/index.html`. Để bật hosting lần đầu, vào **Settings → Pages → Build and deployment → Deploy from a branch**, chọn nhánh **main**, thư mục **/docs**, rồi **Save**. Những lần cập nhật thư mục `docs` trên nhánh main sẽ được Pages triển khai lại. Giao diện tải Swagger UI từ CDN jsDelivr, vì vậy cần kết nối Internet.
 
 ## Chạy bằng Docker
 
@@ -175,7 +183,8 @@ docker compose up -d --build --wait
 ```
 
 - API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- Tài liệu Swagger trên web: https://xuantung159.github.io/smartParking/ (cần bật GitHub Pages như hướng dẫn trên)
+- Swagger của backend khi phát triển local: http://localhost:8080/swagger-ui/index.html — chỉ phản ánh các mapping hiện có trong mã nguồn
 - Health: http://localhost:8080/actuator/health
 
 Health báo ứng dụng sẵn sàng không có nghĩa các chức năng nghiệp vụ đã được triển khai.
@@ -226,3 +235,4 @@ Việc đánh giá cần so sánh trước và sau trên cùng điều kiện: s
 ## Phạm vi triển khai
 
 Cấu hình này phục vụ chạy local/demo. Project hiện cho phép truy cập tất cả API và có tài khoản mẫu `admin`, `staff`, `customer` với mật khẩu `123456`; cần hoàn thiện xác thực, phân quyền và bỏ dữ liệu mẫu trước khi mở dịch vụ ra Internet.
+

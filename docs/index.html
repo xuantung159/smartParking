@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Parking — Tài liệu API</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css">
+  <style>
+    body { margin: 0; background: #fafafa; font-family: system-ui, sans-serif; color: #1f2937; }
+    header { background: #142b41; color: white; padding: 24px max(20px, calc((100vw - 1460px) / 2)); }
+    header h1 { margin: 0 0 8px; font-size: 25px; }
+    header p { margin: 0; line-height: 1.6; }
+    header a { color: #b9e1ff; }
+    .notice { max-width: 1420px; margin: 20px auto 0; padding: 16px 20px; background: #fff6df; border-left: 4px solid #d69822; line-height: 1.6; }
+    .swagger-ui .topbar { display: none; }
+    #load-error { margin: 24px; color: #a12020; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Smart Parking</h1>
+    <p>Tài liệu API cho hệ thống quản lý bãi đỗ xe · <a href="https://github.com/xuantung159/smartParking">Mã nguồn</a> · <a href="./openapi.json">Tải đặc tả OpenAPI</a></p>
+  </header>
+  <aside class="notice">
+    <strong>Đặc tả dự kiến cho pha 1.</strong> Trang chỉ phục vụ đọc tài liệu, không kết nối backend và đã tắt thao tác gọi API.
+    Hiện 11 endpoint là khung trả 501, 4 endpoint đặt chỗ chưa đăng ký. Các quyền và dữ liệu bên dưới là hợp đồng mục tiêu.
+  </aside>
+  <p id="load-error" role="alert" hidden>Không tải được giao diện Swagger. Vui lòng kiểm tra kết nối hoặc tải đặc tả OpenAPI ở phía trên.</p>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script>
+    if (typeof SwaggerUIBundle === "undefined") {
+      document.getElementById("load-error").hidden = false;
+    } else {
+      window.ui = SwaggerUIBundle({
+        url: "./openapi.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        filter: true,
+        docExpansion: "list",
+        defaultModelsExpandDepth: 0,
+        supportedSubmitMethods: [],
+        tryItOutEnabled: false,
+        validatorUrl: null,
+        persistAuthorization: false
+      });
+    }
+  </script>
+</body>
+</html>
