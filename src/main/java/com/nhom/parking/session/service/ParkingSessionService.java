@@ -45,7 +45,7 @@ public class ParkingSessionService {
         this.sessionMapper = sessionMapper;
     }
 
-    // ============ API 11: check-in ============
+    // API 11: check-in 
     @Transactional
     public SessionResponse checkIn(CheckInRequest request) {
         // 1. Xe đang gửi trong bãi?
@@ -98,7 +98,7 @@ public class ParkingSessionService {
         return sessionMapper.toResponse(saved);
     }
 
-    // ============ API 12: check-out ============
+    // API 12: check-out 
     @Transactional
     public CheckOutResponse checkOut(Long sessionId) {
         ParkingSession session = sessionRepository.findById(sessionId)
@@ -127,7 +127,7 @@ public class ParkingSessionService {
                 session.getStatus().name());
     }
 
-    // ============ API 13: list ============
+    // API 13: list 
     @Transactional(readOnly = true)
     public List<SessionResponse> list(SessionStatus status) {
         List<ParkingSession> sessions = (status == null)
@@ -136,7 +136,7 @@ public class ParkingSessionService {
         return sessions.stream().map(sessionMapper::toResponse).toList();
     }
 
-    // ============ API 14: get by id ============
+    // API 14: get by id 
     @Transactional(readOnly = true)
     public SessionResponse get(Long id) {
         ParkingSession session = sessionRepository.findById(id)
@@ -144,7 +144,7 @@ public class ParkingSessionService {
         return sessionMapper.toResponse(session);
     }
 
-    // ============ API 15: cancel ============
+    // API 15: cancel
     @Transactional
     public void cancel(Long id) {
         ParkingSession session = sessionRepository.findById(id)
@@ -162,7 +162,7 @@ public class ParkingSessionService {
         slotService.markAvailable(session.getSlotId());
     }
 
-    // ============ Helpers ============
+    // Helpers 
     private Long findAvailableSlotId(VehicleType vehicleType) {
         List<SlotResponse> slots = slotService.findUsableByVehicleType(vehicleType, false);
         if (slots.isEmpty()) {
