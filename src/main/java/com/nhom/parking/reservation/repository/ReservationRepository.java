@@ -13,17 +13,34 @@ import com.nhom.parking.reservation.entity.ReservationStatus;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
-    @Query(
-			"""
+	boolean existsByCode(String code);
+
+	List<Reservation> findByUserIdOrderByStartTimeDesc(Long userId);
+
+	@Query("""
 			select distinct r.slotId from Reservation r
 			where r.slotId in :slotIds
 			  and r.status = :status
 			  and r.startTime < :endTime
-			  and r.endTime > :startTime"""
-	)
-    List<Long> findBookedSlotIds(@Param("slotIds") Collection<Long> slotIds,
-                                 @Param("status") ReservationStatus status,
-                                 @Param("startTime") LocalDateTime startTime,
-                                 @Param("endTime") LocalDateTime endTime);
+			  and r.endTime > :startTime
+			""")
+	List<Long> findBookedSlotIds(@Param("slotIds") Collection<Long> slotIds,
+								 @Param("status") ReservationStatus status,
+								 @Param("startTime") LocalDateTime startTime,
+								 @Param("endTime") LocalDateTime endTime
+	);
+
+	@Query("""
+			select count(r) from Reservation r
+			where r.slotId = :slotId
+			  and r.status = :status
+			  and r.startTime < :endTime
+			  and r.endTime > :startTime
+			""")
+	long countOverlapping(@Param("slotId") Long slotId,
+						  @Param("status") ReservationStatus status,
+						  @Param("startTime") LocalDateTime startTime,
+						  @Param("endTime") LocalDateTime endTime
+	);
 
 }
