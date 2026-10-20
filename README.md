@@ -1,14 +1,8 @@
 # Smart Parking
 
-Đồ án môn Kiến trúc phần mềm: xây dựng backend quản lý bãi đỗ xe máy và ô tô. Khách hàng đặt chỗ trước, nhân viên ghi nhận xe vào/ra và tính phí, quản trị viên quản lý tài khoản và chỗ đỗ.
+Bài tập lớn môn Kiến trúc phần mềm: xây dựng backend quản lý bãi đỗ xe máy và ô tô. Khách hàng đặt chỗ trước, nhân viên ghi nhận xe vào/ra và tính phí, quản trị viên quản lý tài khoản và chỗ đỗ.
 
-Nhóm tập trung vào bài toán đặt chỗ đồng thời: hai khách có thể cùng thấy một chỗ trống, nhưng không được đặt thành công cùng chỗ trong hai khung giờ giao nhau.
 
-## Hiện trạng
-
-Đã có entity, schema, dữ liệu mẫu và khung controller. Hiện 11 endpoint trả 501, bốn endpoint đặt chỗ chưa đăng ký; service, repository, DTO và JWT chưa triển khai. SecurityConfig đang cho phép truy cập tất cả API.
-
-Nội dung nghiệp vụ và API bên dưới là thiết kế cần hoàn thiện. Dự án hiện chỉ có backend, chưa có giao diện và thanh toán trực tuyến.
 
 ## Nghiệp vụ
 
