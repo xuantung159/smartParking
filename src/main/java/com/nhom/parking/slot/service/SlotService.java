@@ -15,9 +15,6 @@ import com.nhom.parking.slot.entity.ParkingSlot;
 import com.nhom.parking.slot.entity.SlotStatus;
 import com.nhom.parking.slot.mapper.SlotMapper;
 import com.nhom.parking.slot.repository.ParkingSlotRepository;
-import com.nhom.parking.common.exception.AppException;
-import com.nhom.parking.common.exception.ErrorCode;
-import com.nhom.parking.slot.entity.ParkingSlot;
 
 @Service
 public class SlotService {
@@ -52,6 +49,13 @@ public class SlotService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public SlotResponse get(Long slotId) {
+        return parkingSlotRepository.findById(slotId)
+                .map(slotMapper::toResponse)
+                .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
+    }
+
     /**
      * Locks the parking space record so the caller can check it and create a
      * reservation without another request interfering.
@@ -77,7 +81,7 @@ public class SlotService {
 
     @Transactional
     public void markOccupied(Long slotId) {
-        ParkingSlot slot = parkingSlotRepository.findById(slotId)
+        ParkingSlot slot = parkingSlotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
         if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new AppException(ErrorCode.SLOT_UNAVAILABLE);
@@ -88,8 +92,11 @@ public class SlotService {
 
     @Transactional
     public void markAvailable(Long slotId) {
-        ParkingSlot slot = parkingSlotRepository.findById(slotId)
+        ParkingSlot slot = parkingSlotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
+        if (slot.getStatus() != SlotStatus.OCCUPIED) {
+            throw new AppException(ErrorCode.SLOT_UNAVAILABLE);
+        }
         slot.setStatus(SlotStatus.AVAILABLE);
         parkingSlotRepository.save(slot);
     }
