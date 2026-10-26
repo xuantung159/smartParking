@@ -62,7 +62,7 @@ public class SlotService {
     public SlotResponse lockBookableSlot(Long slotId) {
         ParkingSlot slot = parkingSlotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-        if (slot.getStatus() == SlotStatus.DISABLED) {
+        if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new AppException(ErrorCode.SLOT_UNAVAILABLE);
         }
         return slotMapper.toResponse(slot);

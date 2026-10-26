@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -19,6 +20,7 @@ import com.nhom.parking.common.exception.ErrorCode;
 import com.nhom.parking.common.security.AuthenticatedUser;
 import com.nhom.parking.reservation.dto.CreateReservationRequest;
 import com.nhom.parking.reservation.dto.ReservationResponse;
+import com.nhom.parking.reservation.entity.ReservationStatus;
 import com.nhom.parking.reservation.service.ReservationService;
 
 import jakarta.validation.Valid;
@@ -33,12 +35,12 @@ public class ReservationController {
 		this.reservationService = reservationService;
 	}
 
-	// API 7 (CUSTOMER): create a reservation
+	// API 7: Create a reservation
 	@PostMapping
-	public ResponseEntity<ReservationResponse> create(@AuthenticationPrincipal AuthenticatedUser user,
-													  @Valid @RequestBody CreateReservationRequest request)
-	{
-		ReservationResponse response = reservationService.create(userId(user), request);
+	public ResponseEntity<ReservationResponse> create(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@Valid @RequestBody CreateReservationRequest request) {
+		ReservationResponse response = reservationService.create(currentUserId(user), request);
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
 				.path("/{id}")
 				.buildAndExpand(response.id())
@@ -46,28 +48,33 @@ public class ReservationController {
 		return ResponseEntity.created(location).body(response);
 	}
 
-	// API 8 (CUSTOMER): list the customer's own reservations
+	// API 8: List the user's reservations, optionally filtered by status
 	@GetMapping("/me")
-	public ResponseEntity<List<ReservationResponse>> listMine(@AuthenticationPrincipal AuthenticatedUser user) {
-		return ResponseEntity.ok(reservationService.listMine(userId(user)));
+	public ResponseEntity<List<ReservationResponse>> listMine(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@RequestParam(required = false) ReservationStatus status) {
+		return ResponseEntity.ok(reservationService.listMine(currentUserId(user), status));
 	}
 
-	// API 9 (CUSTOMER): details of the customer's own reservation
+	// API 9: Details of one of the user's reservations
 	@GetMapping("/{id}")
-	public ResponseEntity<ReservationResponse> get(@AuthenticationPrincipal AuthenticatedUser user,
-												   @PathVariable Long id) {
-		return ResponseEntity.ok(reservationService.get(userId(user), id));
+	public ResponseEntity<ReservationResponse> get(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@PathVariable Long id) {
+		return ResponseEntity.ok(reservationService.get(currentUserId(user), id));
 	}
 
-	// API 10 (CUSTOMER): cancel the customer's own reservation
+	// API 10: Cancel a reservation
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> cancel(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
-		reservationService.cancel(userId(user), id);
+	public ResponseEntity<Void> cancel(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@PathVariable Long id) {
+		reservationService.cancel(currentUserId(user), id);
 		return ResponseEntity.noContent().build();
 	}
 
-	// If not logged in, return 401.
-	private static Long userId(AuthenticatedUser user) {
+	// If the JWT filter is not present, the principal is null: return 401 instead of NullPointerException.
+	private static Long currentUserId(AuthenticatedUser user) {
 		if (user == null) {
 			throw new AppException(ErrorCode.UNAUTHENTICATED);
 		}
