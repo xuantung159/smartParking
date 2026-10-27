@@ -9,7 +9,8 @@ import com.nhom.parking.slot.entity.ParkingSlot;
 public class SlotMapper {
 
     public SlotResponse toResponse(ParkingSlot slot) {
-        return new SlotResponse(slot.getId(), slot.getCode(), slot.getVehicleType(), slot.getStatus());
+        return new SlotResponse(slot.getId(), slot.getCode(), slot.getVehicleType(), slot.getStatus(),
+                slot.getCreatedAt());
     }
 
 }

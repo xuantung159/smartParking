@@ -18,3 +18,9 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+app:
+  jwt:
+    # Ít nhất 32 ký tự. Để trống thì mỗi lần khởi động sinh khoá ngẫu nhiên (token cũ mất hiệu lực).
+    secret: ${JWT_SECRET:}
+    expires-in: ${JWT_EXPIRES_IN:3600} # giây

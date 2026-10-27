@@ -20,6 +20,8 @@ public interface ParkingSlotRepository extends JpaRepository<ParkingSlot, Long> 
     List<ParkingSlot> findByVehicleTypeAndStatusInOrderByCodeAsc(VehicleType vehicleType,
                                                                  Collection<SlotStatus> statuses);
 
+    boolean existsByCode(String code);
+
     // SELECT ... FOR UPDATE:
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from ParkingSlot s where s.id = :id")

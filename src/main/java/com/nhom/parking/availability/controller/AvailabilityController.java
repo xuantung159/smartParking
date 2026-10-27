@@ -2,6 +2,7 @@ package com.nhom.parking.availability.controller;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +25,7 @@ public class AvailabilityController {
 
 	// API 6: Tra cứu chỗ trống theo loại xe và khung giờ (công khai, không giữ chỗ)
 	@GetMapping
+	@PreAuthorize("permitAll()")
 	public ResponseEntity<AvailabilityResponse> search(@ParameterObject @Valid AvailabilityQuery query) {
 		return ResponseEntity.ok(availabilityService.search(query));
 	}

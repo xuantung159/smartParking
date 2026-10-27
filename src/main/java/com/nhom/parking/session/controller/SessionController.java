@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +22,9 @@ import com.nhom.parking.session.service.ParkingSessionService;
 
 import jakarta.validation.Valid;
 
+// Chỉ STAFF.
 @RestController
+@PreAuthorize("hasRole('STAFF')")
 @RequestMapping("/api/sessions")
 public class SessionController {
 
