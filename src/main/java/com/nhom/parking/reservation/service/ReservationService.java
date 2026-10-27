@@ -51,7 +51,11 @@ public class ReservationService {
     /** API 7: create a reservation for the user with the given userId. */
     @Transactional
     public ReservationResponse create(Long userId, CreateReservationRequest request) {
+        String licensePlate = normalizePlate(request.licensePlate());
+
         SlotResponse slot = slotService.lockBookableSlot(request.slotId());
+
+        reservationRepository.lockLicensePlate(licensePlate);
 
         long overlapping = reservationRepository.countOverlapping(slot.id(), ReservationStatus.ACTIVE,
                 request.startTime(), request.endTime());
@@ -59,11 +63,17 @@ public class ReservationService {
             throw new AppException(ErrorCode.RESERVATION_TIME_CONFLICT);
         }
 
+        long vehicleOverlapping = reservationRepository.countOverlappingByLicensePlate(licensePlate,
+                ReservationStatus.ACTIVE, request.startTime(), request.endTime());
+        if (vehicleOverlapping > 0) {
+            throw new AppException(ErrorCode.VEHICLE_ALREADY_RESERVED);
+        }
+
         Reservation reservation = new Reservation();
         reservation.setCode(generateUniqueCode());
         reservation.setUserId(userId);
         reservation.setSlotId(slot.id());
-        reservation.setLicensePlate(normalizePlate(request.licensePlate()));
+        reservation.setLicensePlate(licensePlate);
         reservation.setStartTime(request.startTime());
         reservation.setEndTime(request.endTime());
         reservation.setStatus(ReservationStatus.ACTIVE);

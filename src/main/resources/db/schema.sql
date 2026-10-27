@@ -41,7 +41,15 @@ CREATE TABLE IF NOT EXISTS reservations (
     CONSTRAINT fk_reservations_slot FOREIGN KEY (slot_id) REFERENCES parking_slots (id),
     CONSTRAINT ck_reservations_time CHECK (end_time > start_time),
     INDEX idx_reservations_slot_time (slot_id, start_time, end_time),
+    INDEX idx_reservations_user (user_id),
+    INDEX idx_reservations_plate_time (license_plate, start_time, end_time),
     INDEX idx_reservations_user (user_id)
+);
+
+-- B: khóa theo biển số, để tuần tự hóa các yêu cầu đặt chỗ đồng thời của cùng một xe
+CREATE TABLE IF NOT EXISTS license_plate_locks (
+    license_plate VARCHAR(20) NOT NULL,
+    PRIMARY KEY (license_plate)
 );
 
 -- C: lượt gửi xe
