@@ -3,6 +3,7 @@ package com.nhom.parking.session.service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,35 +49,38 @@ public class ParkingSessionService {
     // API 11: check-in 
     @Transactional
     public SessionResponse checkIn(CheckInRequest request) {
+        String licensePlate = request.getLicensePlate().strip().toUpperCase(Locale.ROOT);
+
         // 1. Xe đang gửi trong bãi?
-        if (sessionRepository.existsByLicensePlateAndStatus(request.getLicensePlate(), SessionStatus.ACTIVE)) {
+        if (sessionRepository.existsByLicensePlateIgnoreCaseAndStatus(licensePlate, SessionStatus.ACTIVE)) {
             throw new AppException(ErrorCode.VEHICLE_ALREADY_PARKED);
         }
 
-        Long slotId = null;
+        Long slotId;
         Long reservationId = null;
+        Reservation reservation = null;
 
         // 2. Nếu có reservationId, kiểm tra và lấy slot đã đặt
         if (request.getReservationId() != null) {
-            Reservation reservation = reservationRepository.findById(request.getReservationId())
+            reservation = reservationRepository.findByIdForUpdate(request.getReservationId())
                     .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
 
             if (reservation.getStatus() != ReservationStatus.ACTIVE) {
                 throw new AppException(ErrorCode.RESERVATION_NOT_ACTIVE);
             }
-            if (!reservation.getLicensePlate().equalsIgnoreCase(request.getLicensePlate())) {
+            if (!reservation.getLicensePlate().strip().equalsIgnoreCase(licensePlate)) {
                 throw new AppException(ErrorCode.INVALID_INPUT);
             }
-            if (reservation.getVehicleType() != request.getVehicleType()) {
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(reservation.getStartTime()) || !now.isBefore(reservation.getEndTime())) {
+                throw new AppException(ErrorCode.INVALID_INPUT);
+            }
+            if (slotService.get(reservation.getSlotId()).vehicleType() != request.getVehicleType()) {
                 throw new AppException(ErrorCode.INVALID_INPUT);
             }
 
             slotId = reservation.getSlotId();
             reservationId = reservation.getId();
-
-            // Đánh dấu reservation đã dùng
-            reservation.setStatus(ReservationStatus.USED);
-            reservationRepository.save(reservation);
         } else {
             // 3. Khách vãng lai: tìm slot trống phù hợp
             slotId = findAvailableSlotId(request.getVehicleType());
@@ -85,11 +89,15 @@ public class ParkingSessionService {
         // 4. Đổi trạng thái slot sang OCCUPIED
         slotService.markOccupied(slotId);
 
+        if (reservation != null) {
+            reservation.setStatus(ReservationStatus.USED);
+        }
+
         // 5. Tạo session
         ParkingSession session = new ParkingSession();
         session.setSlotId(slotId);
         session.setReservationId(reservationId);
-        session.setLicensePlate(request.getLicensePlate());
+        session.setLicensePlate(licensePlate);
         session.setVehicleType(request.getVehicleType());
         session.setCheckInTime(LocalDateTime.now());
         session.setStatus(SessionStatus.ACTIVE);
@@ -101,7 +109,7 @@ public class ParkingSessionService {
     // API 12: check-out 
     @Transactional
     public CheckOutResponse checkOut(Long sessionId) {
-        ParkingSession session = sessionRepository.findById(sessionId)
+        ParkingSession session = sessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new AppException(ErrorCode.SESSION_NOT_FOUND));
 
         if (session.getStatus() != SessionStatus.ACTIVE) {
@@ -147,7 +155,7 @@ public class ParkingSessionService {
     // API 15: cancel
     @Transactional
     public void cancel(Long id) {
-        ParkingSession session = sessionRepository.findById(id)
+        ParkingSession session = sessionRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException(ErrorCode.SESSION_NOT_FOUND));
 
         // Chỉ huỷ được khi xe chưa ra
@@ -172,7 +180,12 @@ public class ParkingSessionService {
     }
 
     private long calculateFee(VehicleType vehicleType, LocalDateTime in, LocalDateTime out) {
-        long hours = Math.max(1, Duration.between(in, out).toHours());
+        Duration duration = Duration.between(in, out);
+        long hours = duration.toHours();
+        if (!duration.minusHours(hours).isZero()) {
+            hours++;
+        }
+        hours = Math.max(1, hours);
         long rate = (vehicleType == VehicleType.MOTORBIKE) ? FEE_PER_HOUR_MOTORBIKE : FEE_PER_HOUR_CAR;
         return hours * rate;
     }
