@@ -16,11 +16,9 @@
 	<description>Hệ thống quản lý bãi đỗ xe - kiến trúc nguyên khối</description>
 
     <properties>
-        <java.version>25</java.version>
+        <java.version>17</java.version>
         <springdoc.version>2.8.17</springdoc.version>
         <jjwt.version>0.12.7</jjwt.version>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
     </properties>
 
 	<dependencies>
