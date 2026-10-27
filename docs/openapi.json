@@ -1,0 +1,1840 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Smart Parking API",
+    "version": "0.1.0-draft",
+    "description": "Đặc tả dự kiến cho baseline pha 1. Đây là trang tài liệu, không có backend công khai và đã tắt Try it out.\n\n11 endpoint hiện trả 501; 4 endpoint đặt chỗ chưa đăng ký. DTO, phân trang, JWT, biểu phí và một số chính sách vẫn cần hoàn thiện/thống nhất. Vai trò ở từng API là quyền mục tiêu, chưa được thực thi trong cấu hình hiện tại.\n\nThời gian: ISO 8601 không offset, múi giờ Asia/Ho_Chi_Minh. Khoảng đặt chỗ đề xuất [startTime, endTime), endTime phải sau startTime. Danh sách sắp xếp id giảm dần. Hủy/ngừng sử dụng là cập nhật trạng thái, giữ lịch sử. Mã lỗi và phản hồi dưới đây mô tả hợp đồng mục tiêu."
+  },
+  "tags": [
+    {
+      "name": "Đăng nhập"
+    },
+    {
+      "name": "Tài khoản"
+    },
+    {
+      "name": "Chỗ đỗ"
+    },
+    {
+      "name": "Tra cứu"
+    },
+    {
+      "name": "Đặt chỗ"
+    },
+    {
+      "name": "Lượt gửi xe"
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Đăng nhập"
+        ],
+        "summary": "Đăng nhập",
+        "description": "Quyền mục tiêu: **Công khai**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "post__api_auth_login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "post": {
+        "tags": [
+          "Tài khoản"
+        ],
+        "summary": "Tạo tài khoản",
+        "description": "Quyền mục tiêu: **ADMIN**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "post__api_users",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "USERNAME_EXISTED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tài khoản"
+        ],
+        "summary": "Danh sách tài khoản",
+        "description": "Quyền mục tiêu: **ADMIN**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "get__api_users",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ADMIN",
+                "STAFF",
+                "CUSTOMER"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/slots": {
+      "post": {
+        "tags": [
+          "Chỗ đỗ"
+        ],
+        "summary": "Khai báo chỗ đỗ",
+        "description": "Quyền mục tiêu: **ADMIN**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "post__api_slots",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSlotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SLOT_CODE_EXISTED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/slots/{id}": {
+      "delete": {
+        "tags": [
+          "Chỗ đỗ"
+        ],
+        "summary": "Ngừng sử dụng chỗ đỗ",
+        "description": "Quyền mục tiêu: **ADMIN**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "delete__api_slots_id_",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Thành công, không có body"
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SLOT_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SLOT_UNAVAILABLE — còn xe hoặc đặt chỗ tương lai",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/availability": {
+      "get": {
+        "tags": [
+          "Tra cứu"
+        ],
+        "summary": "Tra cứu chỗ trống",
+        "description": "Quyền mục tiêu: **Công khai**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "get__api_availability",
+        "security": [],
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MOTORBIKE",
+                "CAR"
+              ]
+            }
+          },
+          {
+            "name": "startTime",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2026-10-20T09:00:00",
+              "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "2026-10-20T09:00:00",
+              "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/reservations": {
+      "post": {
+        "tags": [
+          "Đặt chỗ"
+        ],
+        "summary": "Tạo đặt chỗ",
+        "description": "Quyền mục tiêu: **CUSTOMER**. Hiện trạng: mapping mới là comment, chưa đăng ký trong ứng dụng.",
+        "operationId": "post__api_reservations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SLOT_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SLOT_UNAVAILABLE / RESERVATION_TIME_CONFLICT",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/me": {
+      "get": {
+        "tags": [
+          "Đặt chỗ"
+        ],
+        "summary": "Danh sách đặt chỗ của bản thân",
+        "description": "Quyền mục tiêu: **CUSTOMER**. Hiện trạng: mapping mới là comment, chưa đăng ký trong ứng dụng.",
+        "operationId": "get__api_reservations_me",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "CANCELLED",
+                "USED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{id}": {
+      "get": {
+        "tags": [
+          "Đặt chỗ"
+        ],
+        "summary": "Chi tiết đặt chỗ của bản thân",
+        "description": "Quyền mục tiêu: **CUSTOMER**. Hiện trạng: mapping mới là comment, chưa đăng ký trong ứng dụng.",
+        "operationId": "get__api_reservations_id_",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESERVATION_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Đặt chỗ"
+        ],
+        "summary": "Hủy đặt chỗ của bản thân",
+        "description": "Quyền mục tiêu: **CUSTOMER**. Hiện trạng: mapping mới là comment, chưa đăng ký trong ứng dụng.",
+        "operationId": "delete__api_reservations_id_",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Thành công, không có body"
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESERVATION_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RESERVATION_NOT_ACTIVE — đã USED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/check-in": {
+      "post": {
+        "tags": [
+          "Lượt gửi xe"
+        ],
+        "summary": "Ghi nhận xe vào",
+        "description": "Quyền mục tiêu: **STAFF**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "post__api_sessions_check_in",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESERVATION_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VEHICLE_ALREADY_PARKED / SLOT_UNAVAILABLE / RESERVATION_NOT_ACTIVE",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}/check-out": {
+      "post": {
+        "tags": [
+          "Lượt gửi xe"
+        ],
+        "summary": "Ghi nhận xe ra và tính phí",
+        "description": "Quyền mục tiêu: **STAFF**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "post__api_sessions_id_check_out",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SESSION_ALREADY_CLOSED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/sessions": {
+      "get": {
+        "tags": [
+          "Lượt gửi xe"
+        ],
+        "summary": "Danh sách lượt gửi",
+        "description": "Quyền mục tiêu: **STAFF**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "get__api_sessions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    },
+    "/api/sessions/{id}": {
+      "get": {
+        "tags": [
+          "Lượt gửi xe"
+        ],
+        "summary": "Chi tiết lượt gửi",
+        "description": "Quyền mục tiêu: **STAFF**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "get__api_sessions_id_",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công theo hợp đồng mục tiêu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lượt gửi xe"
+        ],
+        "summary": "Hủy lượt gửi nhập nhầm",
+        "description": "Quyền mục tiêu: **STAFF**. Hiện trạng: mapping có trong mã nguồn nhưng trả 501.",
+        "operationId": "delete__api_sessions_id_",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Thành công, không có body"
+          },
+          "400": {
+            "description": "INVALID_INPUT — dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED / INVALID_CREDENTIALS",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ACCESS_DENIED — sai vai trò hoặc không sở hữu đặt chỗ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SESSION_ALREADY_CLOSED — đã COMPLETED",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Phản hồi thực tế hiện tại: endpoint mới là khung, chưa cài đặt."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Xác thực dự kiến; trang này không gọi API."
+      }
+    },
+    "schemas": {
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "username": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "STAFF",
+              "CUSTOMER"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "fullName",
+          "role",
+          "createdAt"
+        ]
+      },
+      "SlotResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "code": {
+            "type": "string",
+            "example": "C-01"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "MOTORBIKE",
+              "CAR"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "OCCUPIED",
+              "DISABLED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "vehicleType",
+          "status",
+          "createdAt"
+        ]
+      },
+      "ReservationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "code": {
+            "type": "string",
+            "example": "RSV-DEMO-001"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "licensePlate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "59A-12345"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          },
+          "endTime": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "CANCELLED",
+              "USED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "userId",
+          "slotId",
+          "licensePlate",
+          "startTime",
+          "endTime",
+          "status",
+          "createdAt"
+        ]
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "reservationId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "nullable": true
+          },
+          "licensePlate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "59A-12345"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "MOTORBIKE",
+              "CAR"
+            ]
+          },
+          "checkInTime": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          },
+          "checkOutTime": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh.",
+            "nullable": true
+          },
+          "fee": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "nullable": true,
+            "description": "Số tiền VND; biểu phí chưa chốt."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "slotId",
+          "reservationId",
+          "licensePlate",
+          "vehicleType",
+          "checkInTime",
+          "checkOutTime",
+          "fee",
+          "status"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "Đề xuất 8–72 byte UTF-8; chưa triển khai."
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "STAFF",
+              "CUSTOMER"
+            ]
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "fullName",
+          "role"
+        ]
+      },
+      "CreateSlotRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "MOTORBIKE",
+              "CAR"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "vehicleType"
+        ]
+      },
+      "CreateReservationRequest": {
+        "type": "object",
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "licensePlate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "59A-12345"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          },
+          "endTime": {
+            "type": "string",
+            "example": "2026-10-20T09:00:00",
+            "description": "ISO 8601 không offset; múi giờ Asia/Ho_Chi_Minh."
+          }
+        },
+        "required": [
+          "slotId",
+          "licensePlate",
+          "startTime",
+          "endTime"
+        ]
+      },
+      "CheckInRequest": {
+        "type": "object",
+        "properties": {
+          "licensePlate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "example": "59A-12345"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "MOTORBIKE",
+              "CAR"
+            ]
+          },
+          "reservationCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          }
+        },
+        "required": [
+          "licensePlate",
+          "vehicleType"
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "about:blank"
+          },
+          "title": {
+            "type": "string",
+            "example": "Conflict"
+          },
+          "status": {
+            "type": "integer",
+            "example": 409
+          },
+          "detail": {
+            "type": "string",
+            "example": "Chỗ đỗ đã được đặt trong khung giờ này"
+          },
+          "code": {
+            "type": "string",
+            "example": "RESERVATION_TIME_CONFLICT"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "detail",
+          "code"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "integer",
+            "example": 3600,
+            "description": "Số giây; thời hạn đề xuất."
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          }
+        },
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "UserPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      },
+      "SlotPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      },
+      "ReservationPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      },
+      "SessionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionResponse"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      }
+    }
+  }
+}

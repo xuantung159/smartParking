@@ -49,6 +49,13 @@ public class SlotService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public SlotResponse get(Long slotId) {
+        return parkingSlotRepository.findById(slotId)
+                .map(slotMapper::toResponse)
+                .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
+    }
+
     /**
      * Locks the parking space record so the caller can check it and create a
      * reservation without another request interfering.
@@ -70,4 +77,27 @@ public class SlotService {
 
     // TODO(A): register new parking slots and discontinue parking slots (APIs 4 and 5)
 
+
+
+    @Transactional
+    public void markOccupied(Long slotId) {
+        ParkingSlot slot = parkingSlotRepository.findByIdForUpdate(slotId)
+                .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
+        if (slot.getStatus() != SlotStatus.AVAILABLE) {
+            throw new AppException(ErrorCode.SLOT_UNAVAILABLE);
+        }
+        slot.setStatus(SlotStatus.OCCUPIED);
+        parkingSlotRepository.save(slot);
+    }
+
+    @Transactional
+    public void markAvailable(Long slotId) {
+        ParkingSlot slot = parkingSlotRepository.findByIdForUpdate(slotId)
+                .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
+        if (slot.getStatus() != SlotStatus.OCCUPIED) {
+            throw new AppException(ErrorCode.SLOT_UNAVAILABLE);
+        }
+        slot.setStatus(SlotStatus.AVAILABLE);
+        parkingSlotRepository.save(slot);
+    }
 }
