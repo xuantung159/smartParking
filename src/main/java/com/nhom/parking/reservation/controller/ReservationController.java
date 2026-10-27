@@ -7,35 +7,75 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import com.nhom.parking.common.exception.AppException;
+import com.nhom.parking.common.exception.ErrorCode;
+import com.nhom.parking.common.security.AuthenticatedUser;
+import com.nhom.parking.reservation.dto.CreateReservationRequest;
+import com.nhom.parking.reservation.dto.ReservationResponse;
+import com.nhom.parking.reservation.entity.ReservationStatus;
+import com.nhom.parking.reservation.service.ReservationService;
+
+import jakarta.validation.Valid;
 
 // Khung endpoint: thêm DTO request/response và gọi service khi cài đặt.
 @RestController
 @RequestMapping("/api/reservations")
 public class ReservationController {
 
-	// TODO(B): Tạo đặt chỗ trước
+	private final ReservationService reservationService;
+
+	public ReservationController(ReservationService reservationService) {
+		this.reservationService = reservationService;
+	}
+
+	// API 7: Create a reservation
 	@PostMapping
-	public ResponseEntity<Void> create() {
-		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	public ResponseEntity<ReservationResponse> create(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@Valid @RequestBody CreateReservationRequest request) {
+		ReservationResponse response = reservationService.create(currentUserId(user), request);
+		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+				.path("/{id}")
+				.buildAndExpand(response.id())
+				.toUri();
+		return ResponseEntity.created(location).body(response);
 	}
 
-	// TODO(B): Danh sách đặt chỗ của bản thân
+	// API 8: List the user's reservations, optionally filtered by status
 	@GetMapping("/me")
-	public ResponseEntity<Void> listMine() {
-		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	public ResponseEntity<List<ReservationResponse>> listMine(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@RequestParam(required = false) ReservationStatus status) {
+		return ResponseEntity.ok(reservationService.listMine(currentUserId(user), status));
 	}
 
-	// TODO(B): Chi tiết một đặt chỗ
+	// API 9: Details of one of the user's reservations
 	@GetMapping("/{id}")
-	public ResponseEntity<Void> get(@PathVariable Long id) {
-		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	public ResponseEntity<ReservationResponse> get(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@PathVariable Long id) {
+		return ResponseEntity.ok(reservationService.get(currentUserId(user), id));
 	}
 
-	// TODO(B): Huỷ một đặt chỗ
+	// API 10: Cancel a reservation
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> cancel(@PathVariable Long id) {
-		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	public ResponseEntity<Void> cancel(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@PathVariable Long id) {
+		reservationService.cancel(currentUserId(user), id);
+		return ResponseEntity.noContent().build();
+	}
+
+	// If the JWT filter is not present, the principal is null: return 401 instead of NullPointerException.
+	private static Long currentUserId(AuthenticatedUser user) {
+		if (user == null) {
+			throw new AppException(ErrorCode.UNAUTHENTICATED);
+		}
+		return user.id();
 	}
 
 }

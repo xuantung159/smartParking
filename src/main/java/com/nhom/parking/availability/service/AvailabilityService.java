@@ -1,6 +1,5 @@
 package com.nhom.parking.availability.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -24,11 +23,15 @@ public class AvailabilityService {
         this.reservationService = reservationService;
     }
 
+    /**
+     * Searches for available slots during [startTime, endTime). Does not hold a slot.
+     * DISABLED and OCCUPIED slots do not accept new reservations, so only AVAILABLE
+     * slots are considered, then slots with an ACTIVE reservation overlapping the time
+     * range are excluded. Adjacent schedules are not considered overlapping.
+     */
     @Transactional(readOnly = true)
     public AvailabilityResponse search(AvailabilityQuery query) {
-        boolean startsInFuture = query.getStartTime().isAfter(LocalDateTime.now());
-
-        List<SlotResponse> candidates = slotService.findUsableByVehicleType(query.getVehicleType(), startsInFuture);
+        List<SlotResponse> candidates = slotService.findUsableByVehicleType(query.getVehicleType(), false);
         List<Long> candidateIds = candidates.stream().map(SlotResponse::id).toList();
         Set<Long> bookedIds = reservationService.findBookedSlotIds(candidateIds, query.getStartTime(),
                 query.getEndTime());

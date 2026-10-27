@@ -24,6 +24,8 @@ public enum ErrorCode {
 	RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy đặt chỗ"),
 	RESERVATION_TIME_CONFLICT(HttpStatus.CONFLICT, "Chỗ đỗ đã được đặt trong khung giờ này"),
 	RESERVATION_NOT_ACTIVE(HttpStatus.CONFLICT, "Đặt chỗ đã huỷ hoặc đã sử dụng"),
+	RESERVATION_NOT_IN_TIME(HttpStatus.CONFLICT, "Chưa đến hoặc đã quá giờ đặt chỗ"),
+	RESERVATION_VEHICLE_MISMATCH(HttpStatus.CONFLICT, "Biển số hoặc loại xe không khớp với đặt chỗ"),
 
 	// session
 	SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy lượt gửi xe"),

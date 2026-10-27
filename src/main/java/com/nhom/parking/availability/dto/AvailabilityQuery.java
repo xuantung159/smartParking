@@ -11,22 +11,22 @@ import jakarta.validation.constraints.NotNull;
 
 /**
  * Query parameters for GET /api/availability.
- * Time format: 2026-10-15T08:00:00.
+ * Time format: 2026-10-15T08:00:00
  */
 public class AvailabilityQuery {
 
-    @NotNull(message = "Vehicle type must not be empty")
+    @NotNull(message = "Loại xe không được để trống")
     private VehicleType vehicleType;
 
-    @NotNull(message = "Start time must not be empty")
+    @NotNull(message = "Giờ bắt đầu không được để trống")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime startTime;
 
-    @NotNull(message = "End time must not be empty")
+    @NotNull(message = "Giờ kết thúc không được để trống")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime endTime;
 
-    @AssertTrue(message = "End time must be after start time")
+    @AssertTrue(message = "Giờ kết thúc phải sau giờ bắt đầu")
     public boolean isTimeRangeValid() {
         return startTime == null || endTime == null || endTime.isAfter(startTime);
     }

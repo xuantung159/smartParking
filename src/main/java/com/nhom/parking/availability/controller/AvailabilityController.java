@@ -1,7 +1,6 @@
 package com.nhom.parking.availability.controller;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +12,6 @@ import com.nhom.parking.availability.service.AvailabilityService;
 
 import jakarta.validation.Valid;
 
-// Endpoint skeleton: add request/response DTOs and call the service during implementation.
 @RestController
 @RequestMapping("/api/availability")
 public class AvailabilityController {
@@ -24,9 +22,10 @@ public class AvailabilityController {
 		this.availabilityService = availabilityService;
 	}
 
-	// TODO(B): Search for available spaces by vehicle type and time slot
+	// API 6: Tra cứu chỗ trống theo loại xe và khung giờ (công khai, không giữ chỗ)
 	@GetMapping
 	public ResponseEntity<AvailabilityResponse> search(@ParameterObject @Valid AvailabilityQuery query) {
 		return ResponseEntity.ok(availabilityService.search(query));
 	}
+
 }
