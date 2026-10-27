@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version-file: pom.xml
+          java-version: '17'
           cache: maven
 
       - name: Build and test
