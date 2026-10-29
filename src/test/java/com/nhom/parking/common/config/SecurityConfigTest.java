@@ -67,29 +67,31 @@ class SecurityConfigTest {
 	@MockitoBean
 	private ParkingSessionService parkingSessionService;
 
-	@ParameterizedTest(name = "{0} {1} chỉ cho {2}")
+	// Cột 3: các vai trò được phép, cách nhau bằng dấu cách. ADMIN có mặt ở mọi endpoint.
+	@ParameterizedTest(name = "{0} {1} cho {2}")
 	@CsvSource({
 			"POST,   /api/users,                  ADMIN",
 			"GET,    /api/users,                  ADMIN",
 			"POST,   /api/slots,                  ADMIN",
 			"DELETE, /api/slots/1,                ADMIN",
-			"POST,   /api/reservations,           CUSTOMER",
-			"GET,    /api/reservations/me,        CUSTOMER",
-			"GET,    /api/reservations/1,         CUSTOMER",
-			"DELETE, /api/reservations/1,         CUSTOMER",
-			"POST,   /api/sessions/check-in,      STAFF",
-			"POST,   /api/sessions/1/check-out,   STAFF",
-			"GET,    /api/sessions,               STAFF",
-			"GET,    /api/sessions/1,             STAFF",
-			"DELETE, /api/sessions/1,             STAFF",
+			"POST,   /api/reservations,           CUSTOMER STAFF ADMIN",
+			"GET,    /api/reservations/me,        CUSTOMER STAFF ADMIN",
+			"GET,    /api/reservations/1,         CUSTOMER STAFF ADMIN",
+			"DELETE, /api/reservations/1,         CUSTOMER STAFF ADMIN",
+			"POST,   /api/sessions/check-in,      STAFF ADMIN",
+			"POST,   /api/sessions/1/check-out,   STAFF ADMIN",
+			"GET,    /api/sessions,               STAFF ADMIN",
+			"GET,    /api/sessions/1,             STAFF ADMIN",
+			"DELETE, /api/sessions/1,             STAFF ADMIN",
 	})
-	void protectedEndpointRequiresExactRole(String method, String path, String allowedRole) throws Exception {
+	void protectedEndpointAllowsOnlyListedRoles(String method, String path, String allowedRoles) throws Exception {
 		mvc.perform(call(method, path))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
 
+		List<String> allowed = List.of(allowedRoles.split(" "));
 		for (String role : ROLES) {
-			if (!role.equals(allowedRole)) {
+			if (!allowed.contains(role)) {
 				mvc.perform(call(method, path).header(HttpHeaders.AUTHORIZATION, bearer(role)))
 						.andExpect(status().isForbidden())
 						.andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -103,10 +105,14 @@ class SecurityConfigTest {
 				.andExpect(status().isOk());
 		mvc.perform(call("DELETE", "/api/slots/1").header(HttpHeaders.AUTHORIZATION, bearer("ADMIN")))
 				.andExpect(status().isNoContent());
-		mvc.perform(call("GET", "/api/reservations/me").header(HttpHeaders.AUTHORIZATION, bearer("CUSTOMER")))
-				.andExpect(status().isOk());
-		mvc.perform(call("GET", "/api/sessions").header(HttpHeaders.AUTHORIZATION, bearer("STAFF")))
-				.andExpect(status().isOk());
+		for (String role : ROLES) {
+			mvc.perform(call("GET", "/api/reservations/me").header(HttpHeaders.AUTHORIZATION, bearer(role)))
+					.andExpect(status().isOk());
+		}
+		for (String role : List.of("STAFF", "ADMIN")) {
+			mvc.perform(call("GET", "/api/sessions").header(HttpHeaders.AUTHORIZATION, bearer(role)))
+					.andExpect(status().isOk());
+		}
 	}
 
 	@Test

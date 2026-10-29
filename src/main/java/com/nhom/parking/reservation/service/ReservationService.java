@@ -84,25 +84,25 @@ public class ReservationService {
                 .toList();
     }
 
-    /** API 9: reservation details; only the reservation owner may view them. */
+    /** API 9: reservation details; the owner, or STAFF/ADMIN (staffAccess), may view them. */
     @Transactional(readOnly = true)
-    public ReservationResponse get(Long userId, Long reservationId) {
+    public ReservationResponse get(Long userId, boolean staffAccess, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
-        ensureOwner(userId, reservation);
+        ensureCanAccess(userId, staffAccess, reservation);
         String slotCode = slotCodes(Set.of(reservation.getSlotId())).get(reservation.getSlotId());
         return reservationMapper.toResponse(reservation, slotCode);
     }
 
     /**
-     * API 10: cancel a reservation (change it to CANCELLED); only the reservation owner may cancel it.
+     * API 10: cancel a reservation (change it to CANCELLED); the owner, or STAFF/ADMIN (staffAccess), may cancel it.
      * ACTIVE: cancel. CANCELLED: cancelling again still succeeds (204). USED: 409.
      */
     @Transactional
-    public void cancel(Long userId, Long reservationId) {
+    public void cancel(Long userId, boolean staffAccess, Long reservationId) {
         Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
-        ensureOwner(userId, reservation);
+        ensureCanAccess(userId, staffAccess, reservation);
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
             return;
@@ -170,8 +170,9 @@ public class ReservationService {
 
     // ===== Internal methods =====
 
-    private static void ensureOwner(Long userId, Reservation reservation) {
-        if (!reservation.getUserId().equals(userId)) {
+    // Chủ lịch, hoặc STAFF/ADMIN hỗ trợ khách.
+    private static void ensureCanAccess(Long userId, boolean staffAccess, Reservation reservation) {
+        if (!staffAccess && !reservation.getUserId().equals(userId)) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
     }
