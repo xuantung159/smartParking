@@ -20,7 +20,7 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@PreAuthorize("hasRole('CUSTOMER')")
+@PreAuthorize("hasAnyRole('CUSTOMER', 'STAFF', 'ADMIN')")
 @RequestMapping("/api/reservations")
 public class ReservationController {
 
@@ -51,20 +51,20 @@ public class ReservationController {
 		return ResponseEntity.ok(reservationService.listMine(currentUserId(user), status));
 	}
 
-	// API 9: Details of one of the user's reservations
+	// API 9: Details of a reservation (own one, or any one for STAFF/ADMIN)
 	@GetMapping("/{id}")
 	public ResponseEntity<ReservationResponse> get(
 			@AuthenticationPrincipal AuthenticatedUser user,
 			@PathVariable Long id) {
-		return ResponseEntity.ok(reservationService.get(currentUserId(user), id));
+		return ResponseEntity.ok(reservationService.get(currentUserId(user), user.isStaffOrAdmin(), id));
 	}
 
-	// API 10: Cancel a reservation
+	// API 10: Cancel a reservation (own one, or any one for STAFF/ADMIN)
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> cancel(
 			@AuthenticationPrincipal AuthenticatedUser user,
 			@PathVariable Long id) {
-		reservationService.cancel(currentUserId(user), id);
+		reservationService.cancel(currentUserId(user), user.isStaffOrAdmin(), id);
 		return ResponseEntity.noContent().build();
 	}
 

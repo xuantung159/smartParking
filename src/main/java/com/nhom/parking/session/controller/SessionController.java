@@ -22,9 +22,9 @@ import com.nhom.parking.session.service.ParkingSessionService;
 
 import jakarta.validation.Valid;
 
-// Chỉ STAFF.
+// STAFF và ADMIN.
 @RestController
-@PreAuthorize("hasRole('STAFF')")
+@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 @RequestMapping("/api/sessions")
 public class SessionController {
 
