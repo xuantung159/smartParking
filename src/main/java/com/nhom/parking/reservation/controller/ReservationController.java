@@ -1,6 +1,7 @@
 package com.nhom.parking.reservation.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -18,8 +19,8 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 
-// Khung endpoint: thêm DTO request/response và gọi service khi cài đặt.
 @RestController
+@PreAuthorize("hasRole('CUSTOMER')")
 @RequestMapping("/api/reservations")
 public class ReservationController {
 

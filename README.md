@@ -1,154 +1,189 @@
 # Smart Parking
 
-Bài tập lớn môn Kiến trúc phần mềm: xây dựng backend quản lý bãi đỗ xe máy và ô tô. Khách hàng đặt chỗ trước, nhân viên ghi nhận xe vào/ra và tính phí, quản trị viên quản lý tài khoản và chỗ đỗ.
+## 1. Bài toán
 
+Bãi xe có một số chỗ cố định, mỗi chỗ chỉ dành cho một loại xe (MOTORBIKE hoặc CAR). Có hai kiểu khách:
 
+- Khách đặt trước: tra chỗ trống theo khung giờ, đặt một chỗ cụ thể, nhận mã đặt chỗ. Đến bãi thì đưa mã cho nhân viên.
+- Khách vãng lai: đến thẳng bãi, nhân viên nhập biển số, hệ thống tự chọn một chỗ còn trống.
 
-## Nghiệp vụ
+Khi xe ra, máy chủ ghi giờ ra và tính phí: xe máy 5.000đ/giờ, ô tô 20.000đ/giờ, làm tròn lên theo giờ, tối thiểu 1 giờ (gửi 61 phút tính 2 giờ).
 
-| Vai trò | Công việc |
+Có 3 vai trò:
+
+| Vai trò | Được làm gì |
 |---|---|
-| Khách chưa đăng nhập | Tra cứu chỗ trống, đăng nhập |
-| CUSTOMER | Đặt chỗ, xem và hủy lịch đặt của mình |
-| STAFF | Ghi nhận xe vào/ra, xem lượt gửi, hủy lượt nhập nhầm |
-| ADMIN | Tạo và xem tài khoản; tạo, ngừng sử dụng chỗ đỗ |
+| Chưa đăng nhập | Tra chỗ trống, đăng ký, đăng nhập |
+| CUSTOMER | Đặt chỗ, xem và hủy lịch đặt của chính mình |
+| STAFF | Check-in, check-out, xem/hủy lượt gửi; xem và hủy mọi lịch đặt |
+| ADMIN | Mọi quyền của STAFF, cộng thêm tạo tài khoản và quản lý chỗ đỗ |
 
-Tài khoản do ADMIN cấp. ADMIN không mặc nhiên có quyền của STAFF hoặc CUSTOMER.
+Khách tự đăng ký thì luôn là CUSTOMER. Tài khoản STAFF/ADMIN chỉ ADMIN tạo được.
 
-### Đặt chỗ
+### Vòng đời trạng thái
 
-1. Khách chọn loại xe và thời gian gửi, xem các chỗ phù hợp.
-2. Đăng nhập, chọn chỗ và nhập biển số.
-3. Khi xác nhận, hệ thống kiểm tra lại lịch rồi tạo đặt chỗ ACTIVE, trả mã đặt chỗ. Nếu chỗ vừa được người khác đặt thì trả 409 để khách chọn lại.
-4. Khách xem lịch của mình hoặc hủy khi chưa sử dụng. Khi đến bãi, đưa mã cho nhân viên.
+- Chỗ đỗ: `AVAILABLE` → `OCCUPIED` (có xe) → `AVAILABLE`. Admin ngừng dùng thì thành `DISABLED`, không xóa bản ghi.
+- Lịch đặt: `ACTIVE` → `USED` (đã check-in) hoặc `CANCELLED`.
+- Lượt gửi: `ACTIVE` → `COMPLETED` (đã check-out) hoặc `CANCELLED` (nhân viên nhập nhầm).
 
-Tra cứu không giữ chỗ. Ví dụ C-01 đã được đặt 09:00–11:00 thì không nhận lịch 10:00–12:00, nhưng có thể nhận lịch bắt đầu từ 11:00.
+Check-in có mã đặt chỗ sẽ đụng tới cả ba bảng: tạo lượt gửi, đổi chỗ sang OCCUPIED, đổi lịch đặt sang USED. Ba việc này nằm chung một transaction, lỗi giữa chừng thì rollback hết.
 
-### Xe vào và xe ra
+### Các quy tắc
 
-1. Nhân viên nhập biển số, loại xe và mã đặt chỗ nếu có.
-2. Có mã đặt trước: kiểm tra lịch còn hiệu lực, đúng xe và chỗ còn trống. Khách vãng lai được hệ thống chọn chỗ phù hợp.
-3. Xe vào: tạo lượt gửi ACTIVE, đổi chỗ thành OCCUPIED; đặt chỗ chuyển USED nếu có.
-4. Xe ra: máy chủ ghi giờ ra, tính phí, chuyển lượt gửi COMPLETED và trả chỗ về AVAILABLE.
-5. Nếu nhập nhầm, nhân viên được hủy lượt ACTIVE sau khi xác minh xe không chiếm chỗ. Đặt chỗ đã USED không tự khôi phục.
+- Khoảng thời gian đặt là `[startTime, endTime)`. Lịch 09:00–11:00 chặn 10:00–12:00 nhưng không chặn 11:00–13:00.
+- Chỉ lịch `ACTIVE` mới chặn giờ. Lịch phải ở tương lai và startTime < endTime.
+- Chỉ check-in được trong khung startTime ≤ now < endTime, chưa có thời gian ân hạn. Lịch quá giờ vẫn để ACTIVE nhưng không dùng được.
+- Khi cấp chỗ cho khách vãng lai, yêu cầu nghiệp vụ là không ảnh hưởng lịch đặt trước. Việc chọn chỗ và kiểm tra lại lịch trong cùng giao dịch là điểm cần rà soát ở phase 2.
+- Một biển số chỉ có một lượt gửi ACTIVE; một mã đặt chỗ chỉ dùng một lần.
+- Biển số được trim, viết hoa, tối đa 20 ký tự.
 
-Các cập nhật lượt gửi, chỗ đỗ và đặt chỗ phải nằm trong cùng giao dịch; có lỗi thì rollback toàn bộ.
+## 2. Công nghệ
 
-### Quản lý bãi
-
-ADMIN tạo tài khoản theo vai trò và khai báo chỗ theo loại xe MOTORBIKE/CAR. Chỗ mới có trạng thái AVAILABLE. Ngừng sử dụng chỗ là đổi sang DISABLED, không xóa lịch sử; từ chối nếu chỗ còn xe hoặc lịch đặt chưa kết thúc.
-
-### Quy tắc cần thống nhất khi triển khai
-
-- Thời gian đặt phải ở tương lai, startTime < endTime. Dùng khoảng [startTime, endTime), cho phép hai lịch liền nhau.
-- Chỉ lịch ACTIVE chặn giờ đặt. Chỗ OCCUPIED hoặc DISABLED không nhận đặt mới.
-- Một chỗ và một biển số chỉ có tối đa một lượt gửi ACTIVE; một đặt chỗ chỉ được dùng một lần.
-- Biển số được bỏ khoảng trắng đầu/cuối, viết hoa, dài tối đa 20 ký tự.
-- Đề xuất check-in trong khoảng startTime ≤ giờ hiện tại < endTime, chưa có thời gian ân hạn. Lịch quá giờ vẫn lưu ACTIVE nhưng không được check-in.
-- Với khách vãng lai, đề xuất chỉ cấp chỗ trống không có lịch ACTIVE nào kết thúc sau thời điểm hiện tại, vì chưa biết giờ xe ra.
-- Phí demo đề xuất: xe máy 5.000đ/giờ, ô tô 20.000đ/giờ; làm tròn lên, tối thiểu một giờ. Gửi 61 phút tính hai giờ. Chưa có bước xác nhận thu tiền.
-
-## API
-
-Base URL: http://localhost:8080. Dữ liệu JSON; API cần đăng nhập dùng header Authorization: Bearer <token>. Quyền trong bảng là quyền theo thiết kế, chưa áp dụng trong mã hiện tại.
-
-| Method | Endpoint | Quyền | Nội dung |
-|---|---|---|---|
-| POST | /api/auth/login | Công khai | Đăng nhập bằng username, password |
-| POST | /api/users | ADMIN | Tạo tài khoản: username, password, fullName, role |
-| GET | /api/users | ADMIN | Danh sách tài khoản, lọc role |
-| POST | /api/slots | ADMIN | Tạo chỗ: code, vehicleType |
-| DELETE | /api/slots/{id} | ADMIN | Ngừng sử dụng chỗ |
-| GET | /api/availability | Công khai | Tra cứu theo vehicleType, startTime, endTime |
-| POST | /api/reservations | CUSTOMER | Đặt chỗ: slotId, licensePlate, startTime, endTime |
-| GET | /api/reservations/me | CUSTOMER | Lịch đặt của mình, lọc status |
-| GET | /api/reservations/{id} | CUSTOMER | Chi tiết lịch đặt của mình |
-| DELETE | /api/reservations/{id} | CUSTOMER | Hủy đặt chỗ |
-| POST | /api/sessions/check-in | STAFF | Xe vào: licensePlate, vehicleType, reservationCode tùy chọn |
-| POST | /api/sessions/{id}/check-out | STAFF | Xe ra và tính phí |
-| GET | /api/sessions | STAFF | Danh sách lượt gửi, lọc status |
-| GET | /api/sessions/{id} | STAFF | Chi tiết lượt gửi |
-| DELETE | /api/sessions/{id} | STAFF | Hủy lượt nhập nhầm |
-
-Danh sách dự kiến dùng page từ 0, size mặc định 20, tối đa 100; trả items, page, size, totalElements. Thời gian có dạng 2026-10-21T09:00:00, thống nhất giờ Việt Nam. Giờ vào/ra, phí, trạng thái và userId do máy chủ xác định.
-
-Ví dụ body đặt chỗ; slotId lấy từ kết quả tra cứu, thời gian phải còn ở tương lai:
-
-~~~json
-{
-  "slotId": 1,
-  "licensePlate": "59A-12345",
-  "startTime": "2026-10-21T09:00:00",
-  "endTime": "2026-10-21T11:00:00"
-}
-~~~
-
-Tạo thành công trả 201 cùng thông tin đặt chỗ và mã để check-in. Đăng nhập trả 200 với accessToken và thông tin tài khoản; xe ra trả 200 với giờ ra, phí và trạng thái COMPLETED. Hủy hoặc ngừng sử dụng trả 204, không body.
-
-| Mã HTTP | Ý nghĩa |
+| Thành phần | Dùng gì |
 |---|---|
-| 400 | Dữ liệu không hợp lệ |
-| 401 | Sai thông tin đăng nhập hoặc token không hợp lệ |
-| 403 | Sai quyền hoặc truy cập lịch đặt người khác |
-| 404 | Không tìm thấy tài nguyên |
-| 409 | Trùng lịch, hết chỗ, xe đang gửi hoặc trạng thái không cho phép |
+| Ngôn ngữ / framework | Java 17, Spring Boot 3.5 |
+| Web, validate | spring-boot-starter-web, validation |
+| Bảo mật | Spring Security + JWT (jjwt 0.12), mật khẩu băm BCrypt |
+| Dữ liệu | Spring Data JPA (Hibernate), MySQL 8.4 |
+| Tài liệu API | springdoc-openapi (Swagger UI) |
+| Build / chạy | Maven wrapper, Docker, Docker Compose |
+| CI | GitHub Actions: `mvn verify` và build Docker image mỗi lần push/PR vào main |
 
-Lỗi nghiệp vụ dùng ProblemDetail, có trường code như RESERVATION_TIME_CONFLICT hoặc VEHICLE_ALREADY_PARKED. Hủy lại bản ghi CANCELLED trả 204; hủy lịch USED hoặc lượt gửi COMPLETED trả 409.
+## 3. Tổ chức mã nguồn
 
-Chi tiết request, response và mã lỗi: [OpenAPI](docs/openapi.json), [tài liệu review](CHUAN-BI-REVIEW.md). [Swagger trên web](https://xuantung159.github.io/smartParking/) cần bật GitHub Pages từ nhánh main, thư mục /docs; trang này mô tả API dự kiến và đã tắt gọi thử.
+```
+src/main/java/com/nhom/parking/
+├── auth/           đăng nhập, đăng ký, /me
+├── user/           ADMIN tạo và liệt kê tài khoản
+├── slot/           tạo và ngừng dùng chỗ đỗ
+├── availability/   tra chỗ trống theo loại xe + khung giờ
+├── reservation/    đặt, xem, hủy lịch; dùng lịch khi check-in
+├── session/        check-in, check-out, tính phí
+└── common/         security (JWT), config, exception, PageResponse, enum
+src/main/resources/
+├── application.yml
+└── db/schema.sql, db/data.sql   tạo bảng + dữ liệu mẫu
+```
 
-## Công nghệ và dữ liệu
+Các phần nghiệp vụ được chia theo module
 
-Java 17, Spring Boot 3.5, Spring Data JPA, Spring Security, MySQL 8.4, Maven và Docker Compose. Kiến trúc nguyên khối, chia module auth, user, slot, availability, reservation, session và common.
+Luồng xử lý một request: 
+- 1: bộ lọc JWT xác thực người gọi 
+- 2: controller nhận dữ liệu và kiểm quyền 
+- 3: service xử lý nghiệp vụ 
+- 4: repository đọc/ghi MySQL.
+  (1 --> 2 --> 3 --> 4)
 
-Luồng xử lý dự kiến: Client → JWT/phân quyền → Controller → Service → Repository → MySQL.
+Xử lý dữ liệu vào/ra và exception:
+- DTO dùng cho dữ liệu vào/ra, mapper chuyển giữa entity và DTO. 
+- Lỗi nghiệp vụ được gom về `common/exception`, trả theo dạng ErrorCode.<Lỗi> kèm mã lỗi.
 
-| Bảng | Lưu trữ | Trạng thái |
-|---|---|---|
-| users | Tài khoản, mật khẩu băm BCrypt, họ tên, vai trò | — |
-| parking_slots | Mã chỗ và loại xe | AVAILABLE, OCCUPIED, DISABLED |
-| reservations | Khách đặt, chỗ, biển số, khoảng thời gian | ACTIVE, CANCELLED, USED |
-| parking_sessions | Chỗ, đặt chỗ nếu có, biển số, giờ vào/ra, phí | ACTIVE, COMPLETED, CANCELLED |
+Các thao tác thay đổi dữ liệu dùng `@Transactional` ở service. 
 
-Một tài khoản có nhiều lịch đặt; một chỗ có nhiều lịch đặt và lượt gửi theo thời gian. Schema có khóa ngoại và mã duy nhất, nhưng chưa đủ để ngăn đặt trùng hoặc hai lượt ACTIVE khi có yêu cầu đồng thời.
+Dữ liệu chính gồm bốn bảng:
 
-## Chạy dự án
+| Bảng | Nội dung |
+|---|---|
+| `users` | Tài khoản, mật khẩu băm và vai trò |
+| `parking_slots` | Mã chỗ, loại xe và trạng thái thực tế |
+| `reservations` | Người đặt, chỗ đỗ, biển số và khoảng thời gian giữ chỗ |
+| `parking_sessions` | Lượt xe vào/ra, lịch đặt liên quan nếu có và phí gửi |
 
-Cài Docker Desktop, bật Linux containers rồi tạo file cấu hình:
+Schema và dữ liệu mẫu nằm trong `src/main/resources/db`. 
 
-~~~powershell
+## 4. Chạy và deploy
+
+### Chạy bằng Docker Compose
+
+Cần Docker Desktop với Linux containers. Tại thư mục gốc dự án, tạo cấu hình:
+
+```powershell
 Copy-Item .env.example .env
-~~~
+```
 
-Đặt DB_PASSWORD và MYSQL_ROOT_PASSWORD trong .env, sau đó chạy:
+Điền `DB_PASSWORD` và `MYSQL_ROOT_PASSWORD` trong `.env`, sau đó chạy:
 
-~~~powershell
+```powershell
 docker compose up -d --build --wait
-~~~
+```
 
-- [Swagger local](http://localhost:8080/swagger-ui/index.html): các mapping hiện có.
-- [Health](http://localhost:8080/actuator/health): kiểm tra ứng dụng.
-- APP_PORT trong .env dùng để đổi cổng, mặc định 8080.
+Compose dựng 2 container: 
+- `db` (MySQL 8.4, dữ liệu nằm trong volume `mysql_data`)
+- `app`. App đợi MySQL healthy mới khởi động, rồi tự có healthcheck qua `/actuator/health`. 
+- Dockerfile build 2 bước: image Maven để đóng gói jar, sau đó copy sang image JRE 17 gọn hơn và chạy bằng user không phải root. Cổng app chỉ bind vào `127.0.0.1`, đổi bằng `APP_PORT`.
 
-Compose tự cấu hình kết nối app–MySQL. Khi chạy riêng, dùng DB_URL, DB_USERNAME, DB_PASSWORD và SERVER_PORT theo application.yml. Bảng và dữ liệu mẫu nằm trong src/main/resources/db; Hibernate dùng ddl-auto: validate nên sửa entity phải cập nhật schema tương ứng. Script tạo bảng không tự nâng cấp cấu trúc bảng cũ.
+Sau khi chạy:
 
-Dữ liệu mẫu có ba tài khoản admin, staff, customer, cùng mật khẩu 123456; sáu chỗ M-01–M-03 và C-01–C-03, trong đó C-03 ngừng sử dụng. Đăng nhập hiện chưa hoạt động.
+- Swagger: http://localhost:8080/swagger-ui/index.html
+- Health: http://localhost:8080/actuator/health
+- Tài khoản mẫu: `admin`, `staff`, `customer`, mật khẩu đều là `123456`.
 
-~~~powershell
-docker compose ps
-docker compose logs -f app
-docker compose down
-~~~
+```powershell
+docker compose logs -f app   # xem log
+docker compose down          # tắt, giữ dữ liệu
+docker compose down -v       # tắt và xóa luôn DB
+```
 
-Dữ liệu được giữ trong volume mysql_data. Lệnh docker compose down -v xóa cả dữ liệu. Mật khẩu trong .env chỉ khởi tạo MySQL lần đầu; nếu volume đã có thì phải đổi mật khẩu trong DB tương ứng.
+### Build và chạy riêng backend
 
-## Phần cần kiểm thử
+```powershell
+$env:DB_URL = 'jdbc:mysql://localhost:3306/parking'
+$env:DB_USERNAME = 'parking'
+$env:DB_PASSWORD = '<mat-khau-db>'
+.\mvnw.cmd spring-boot:run
+```
 
-- Đặt đồng thời cùng chỗ, hai lịch giao nhau và hai lịch liền kề.
-- Check-in trùng biển số hoặc dùng cùng mã đặt chỗ hai lần.
-- Tra cứu còn chỗ nhưng lúc xác nhận đã hết; gửi lại yêu cầu khi mất phản hồi.
-- Sai vai trò, xem/hủy lịch người khác, hủy lượt đã kết thúc.
-- Check-out đồng thời với hủy, tính phí ở mốc 60 và 61 phút.
-- Lỗi giữa giao dịch phải rollback cả lượt gửi, chỗ và lịch đặt.
+Build và chạy kiểm thử bằng Maven wrapper:
 
-Sau khi hoàn thiện luồng cơ bản, nhóm sẽ đo tải tra cứu/đặt chỗ và so sánh các cách xử lý đồng thời ở pha 2. Hiện chưa có số liệu hiệu năng. Cấu hình này dùng cho local/demo; cần hoàn thiện xác thực, phân quyền và bỏ tài khoản mẫu trước khi triển khai công khai.
+```powershell
+.\mvnw.cmd verify
+```
+### Cấu hình
+
+| Biến | Ý nghĩa |
+|---|---|
+| `APP_PORT` | Cổng máy host khi chạy Compose, mặc định 8080 |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Kết nối DB khi chạy backend; Compose tự đặt URL và username cho app |
+| `MYSQL_ROOT_PASSWORD` | Mật khẩu root khi khởi tạo container MySQL |
+| `SERVER_PORT` | Cổng backend khi chạy riêng, mặc định 8080 |
+| `JWT_SECRET` | Khóa ký JWT, tối thiểu 32 ký tự; nếu bỏ trống, app sinh khóa mới mỗi lần khởi động |
+| `JWT_EXPIRES_IN` | Thời hạn token tính bằng giây, mặc định 3600 |
+
+## 5. API
+
+| Method | Endpoint | Quyền |
+|---|---|---|
+| POST | /api/auth/register, /api/auth/login | Công khai |
+| GET | /api/auth/me | Đã đăng nhập |
+| POST, GET | /api/users | ADMIN |
+| POST | /api/slots | ADMIN |
+| DELETE | /api/slots/{id} | ADMIN |
+| GET | /api/availability?vehicleType=&startTime=&endTime= | Công khai |
+| POST | /api/reservations | Đã đăng nhập |
+| GET | /api/reservations/me | Đã đăng nhập |
+| GET, DELETE | /api/reservations/{id} | Chủ lịch, STAFF, ADMIN |
+| POST | /api/sessions/check-in | STAFF, ADMIN |
+| POST | /api/sessions/{id}/check-out | STAFF, ADMIN |
+| GET | /api/sessions, /api/sessions/{id} | STAFF, ADMIN |
+| DELETE | /api/sessions/{id} | STAFF, ADMIN |
+
+Mã lỗi:
+- 400 dữ liệu sai
+- 401 chưa/sai đăng nhập
+- 403 sai quyền
+- 404 không thấy
+- 409 trùng lịch, hết chỗ, xe đang gửi hoặc trạng thái không cho phép.
+
+Đặc tả chi tiết (request, response, mã lỗi):
+
+- [docs/openapi.json](docs/openapi.json): OpenAPI 3, mở bằng [Swagger Editor](https://editor.swagger.io) hoặc trang [docs/index.html](docs/index.html) (bản GitHub Pages: https://xuantung159.github.io/smartParking/).
+- [docs/postman/](docs/postman/): collection + environment để import vào Postman.
+- Khi app đang chạy, `/v3/api-docs` trả đặc tả sinh trực tiếp từ code, đây là bản đúng nhất.
+
+## 6. Các điểm cần tiếp tục ở phase 2
+
+- Nhiều khách cùng đặt một chỗ; đặt chỗ đồng thời với nhận xe vãng lai hoặc ngừng sử dụng chỗ. Kiểm tra lại lịch sau khi khóa chỗ, tránh cấp chỗ dựa trên kết quả tra cứu đã cũ.
+- Người dùng gửi lại yêu cầu vì mất phản hồi. Cần xác định cách nhận biết yêu cầu lặp, nhất là đặt chỗ, nhận xe và trả xe.
+- Lỗi giữa giao dịch, chờ khóa và deadlock. Kiểm tra rollback, thứ tự lấy khóa và phản hồi lỗi để người dùng biết cách xử lý tiếp.
+- Khách không đến, đến muộn hoặc xe ở quá giờ. Cần chốt thời gian ân hạn, cách hết hạn lịch và cách xử lý khi ảnh hưởng người đặt tiếp theo.
+- Dữ liệu và lượng truy cập tăng. Đo độ trễ, thông lượng, tỷ lệ lỗi và kiểm tra dữ liệu sau mỗi lần chạy; từ đó chọn cách cải tiến truy vấn, chỉ mục, phân trang hoặc cache.
